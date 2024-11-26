@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>智能聊天应用</title>
+		<script src="js/v3.2.8/vue.global.prod.js" type="text/javascript" charset="utf-8"></script>
+		<style>
+			.chat-window {
+				border: 1px solid #ccc;
+				padding: 10px;
+				height: 300px;
+				overflow-y: auto;
+				margin-bottom: 10px;
+			}
+			.message {
+				margin: 5px 0;
+			}
+			.input-area {
+				display: flex;
+			}
+			input[type="text"] {
+				flex: 1;
+				padding: 5px;
+			}
+			.center-content {
+				text-align: center;
+				margin-top: 20px;
+			}
+			.center-content img {
+				max-width: 100%;
+				height: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			<div class="chat-window">
+				<div v-for="message in messages" :key="message.id" class="message">
+					<strong v-if="message.role === 'user'">用户:</strong>
+					<strong v-else>回复:</strong>
+					{{ message.text }}
+				</div>
+			</div>
+			<div class="input-area">
+				<input v-model="newMessage" @keyup.enter="sendMessage" placeholder="输入消息..." />
+			</div>
+		</div>
+		<div class="center-content">
+			<p>好用请自愿打赏</p>
+			<img src="img/webwxgetmsgimg.jpg" alt="打赏二维码">
+		</div>
+		<script>
+			const App = {
+				data() {
+					return {
+						messages: [],
+						newMessage: ''
+					}
+				},
+				methods: {
+					async sendMessage() {
+						if (this.newMessage.trim() === '') return;
+						
+						// 添加用户消息到消息列表
+						this.messages.push({ id: Date.now(), text: this.newMessage, role: 'user' });
+						
+						// 调用API获取实时数据
+						try {
+							const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': 'Bearer 4b4a3b54562fd5dc3965b6fe032d6b23.0y2ep1IRgXTHHhVj' // 使用新的API Key
+								},
+								body: JSON.stringify({
+									model: "glm-4",
+									messages: [
+										{
+											role: "user",
+											content: this.newMessage
+										}
+									]
+								})
+							});
+							
+							// 检查响应状态
+							if (!response.ok) {
+								console.error('Network response was not ok:', response.statusText);
+								return;
+							}
+							
+							const data = await response.json();
+							
+							// 检查API响应并添加到消息列表
+							if (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+								this.messages.push({ id: Date.now() + 1, text: data.choices[0].message.content, role: 'reply' });
+							} else {
+								console.error('Invalid response:', data);
+							}
+						} catch (error) {
+							console.error('Error:', error);
+						}
+						
+						// 清空输入框
+						this.newMessage = '';
+					}
+				}
+			};
+			Vue.createApp(App).mount('#app');
+		</script>
+	</body>
+</html>
